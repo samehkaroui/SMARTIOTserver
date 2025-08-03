@@ -30,7 +30,9 @@ transporter.verify(function(error, success) {
 });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+// Use Render's PORT environment variable with fallback
+const PORT = process.env.PORT || 10000;
+const HOST = '0.0.0.0'; // Required for Render
 
 // Sample data - in a real app, this would be in a database
 let users = [
@@ -39,10 +41,27 @@ let users = [
 ];
 
 // Middleware
+// Configure CORS for both development and production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://your-production-domain.com' // Replace with your actual production domain
+];
+
 app.use(cors({
-  origin: 'http://localhost:5173', // Update this with your frontend URL
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
 }));
 app.use(express.json());
 
@@ -275,7 +294,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-  console.log(`API available at http://localhost:${PORT}/api`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server is running on http://${HOST}:${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
